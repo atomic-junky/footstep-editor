@@ -19,31 +19,35 @@ QFrame {
     background-color: transparent;
 }
 
+QFrame#ViewPanel {
+    background-color: $border_color;
+}
+
 QPushButton {
     background-color: $surface_color;
     border: 1px solid $border_color;
     border-radius: 4px;
     padding: 4px 8px;
     font-weight: 600;
-}
 
-QPushButton:hover {
-    background-color: #f9fafb;
-    border-color: #d1d5db;
-}
+    &:hover {
+        background-color: #f9fafb;
+        border-color: #d1d5db;
+    }
 
-QPushButton:pressed {
-    background-color: #f3f4f6;
-}
+    &:pressed {
+        background-color: #f3f4f6;
+    }
 
-QPushButton[class="primary"] {
-    background-color: $primary_color;
-    color: white;
-    border: none;
-}
+    &[class="primary"] {
+        background-color: $primary_color;
+        color: white;
+        border: none;
 
-QPushButton[class="primary"]:hover {
-    background-color: #7c3aed;
+        &:hover {
+            background-color: #7c3aed;
+        }
+    }
 }
 
 QSplitter::handle {
@@ -62,12 +66,8 @@ QMenuBar::item {
     padding: 3px 6px;
     border-radius: 3px;
     background: transparent;
-}
 
-QMenuBar::item:selected {
-    background-color: $bg_color;
-}
-
-QFrame#ViewPanel {
-    background-color: $border_color;
+    &:selected {
+        background-color: $bg_color;
+    }
 }
