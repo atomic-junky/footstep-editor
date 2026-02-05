@@ -8,8 +8,6 @@ from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QSplitter
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
-from src.ui.theme import STYLESHEET
-
 # Import our custom widgets
 from src.ui.widgets.view_panel import ViewPanel
 from src.ui.widgets.properties_panel import PropertiesPanel
@@ -24,6 +22,9 @@ class FSEditor(QMainWindow):
         
         self._init_ui()
         self._create_menubar()
+        
+        self.show()
+        
 
     def _create_menubar(self):
         """Create the application menu bar."""
@@ -72,9 +73,6 @@ class FSEditor(QMainWindow):
 
     def _init_ui(self):
         """Initialize the layout and widgets."""
-        
-        # Apply the theme
-        self.setStyleSheet(STYLESHEET)
         
         central_widget = QWidget()
         self.setCentralWidget(central_widget)

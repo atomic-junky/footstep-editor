@@ -1,19 +1,20 @@
-import ui.frmMain as main_form
-from PySide6.QtWidgets import QMainWindow, QApplication
+import logging
+import sys
+from pathlib import Path
+
+from PySide6.QtWidgets import QApplication
+import sass
 
 
-class MyAppName(QMainWindow, main_form.Ui_frmMain):
-    def __init__(self, parent=None):
-        super(MyAppName, self).__init__(parent)
-        self.setupUi(self)
-
-        self.btnTryMe.clicked.connect(self.try_me)
-
-        self.show()
-
-    def try_me(self):
-        self.txtOutput.setText("Thanks for trying me!")
+log = logging.getLogger(__name__)
 
 
-def refresh():
-    QApplication.processEvents()
+class FSEAPP(QApplication):
+    def __init__(self):
+        super().__init__(sys.argv)
+        self.setup_style_sheet()
+        
+
+    def setup_style_sheet(self):
+        compiled_css = sass.compile(filename="src/ui/themes/main.scss")
+        self.setStyleSheet(compiled_css)

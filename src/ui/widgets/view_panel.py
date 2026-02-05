@@ -10,7 +10,7 @@ from PySide6.QtCore import Qt
 class ViewPanel(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("ViewPanel")  # Identified as a Panel for styling
+        self.setObjectName("ViewPanel")
         
         self.setFrameShape(QFrame.Shape.NoFrame)
         
