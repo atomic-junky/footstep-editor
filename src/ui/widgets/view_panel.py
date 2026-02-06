@@ -12,8 +12,6 @@ class ViewPanel(QFrame):
         super().__init__(parent)
         self.setObjectName("ViewPanel")
         
-        self.setFrameShape(QFrame.Shape.NoFrame)
-        
         layout = QVBoxLayout(self)
         
         label = QLabel("View")

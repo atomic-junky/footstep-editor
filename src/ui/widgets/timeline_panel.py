@@ -1,7 +1,5 @@
 """
 Timeline Panel Widget.
-
-This widget contains the main action buttons.
 """
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel
@@ -11,8 +9,6 @@ class TimelinePanel(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("TimelinePanel")
-        
-        self.setFrameShape(QFrame.Shape.NoFrame)
                
         layout = QVBoxLayout(self)
         

@@ -8,7 +8,6 @@ from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QSplitter
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
-# Import our custom widgets
 from src.ui.widgets.view_panel import ViewPanel
 from src.ui.widgets.properties_panel import PropertiesPanel
 from src.ui.widgets.timeline_panel import TimelinePanel
@@ -30,33 +29,27 @@ class FSEditor(QMainWindow):
         """Create the application menu bar."""
         menubar = self.menuBar()
         
-        # --- File Menu ---
         file_menu = menubar.addMenu("&File")
         
-        # New Project
         new_action = QAction("&New Project", self)
         new_action.setShortcut("Ctrl+N")
         file_menu.addAction(new_action)
 
-        # Open
         open_action = QAction("&Open...", self)
         open_action.setShortcut("Ctrl+O")
         file_menu.addAction(open_action)
 
-        # Save
         save_action = QAction("&Save", self)
         save_action.setShortcut("Ctrl+S")
         file_menu.addAction(save_action)
         
         file_menu.addSeparator()
         
-        # Exit
         exit_action = QAction("E&xit", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
-        # --- Edit Menu ---
         edit_menu = menubar.addMenu("&Edit")
         
         undo_action = QAction("&Undo", self)
@@ -67,7 +60,6 @@ class FSEditor(QMainWindow):
         redo_action.setShortcut("Ctrl+Y")
         edit_menu.addAction(redo_action)
         
-        # --- Help Menu ---
         help_menu = menubar.addMenu("&Help")
         help_menu.addAction("About")
 

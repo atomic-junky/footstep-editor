@@ -23,6 +23,11 @@ QFrame#ViewPanel {
     background-color: $border_color;
 }
 
+QFrame#MixPad {
+    background-color: $border_color;
+    border-radius: 16px;
+}
+
 QPushButton {
     background-color: $surface_color;
     border: 1px solid $border_color;
