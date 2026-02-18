@@ -10,7 +10,7 @@ from PySide6.QtGui import QAction
 
 from src.ui.widgets.view_panel import ViewPanel
 from src.ui.widgets.properties_panel import PropertiesPanel
-from src.ui.widgets.timeline_panel import TimelinePanel
+from src.ui.widgets.timeline_panel import TimelineView
 
 class FSEditor(QMainWindow):
     def __init__(self, parent=None):
@@ -83,7 +83,7 @@ class FSEditor(QMainWindow):
         self.top_splitter.addWidget(self.properties_panel)
         self.top_splitter.setSizes([400, 600])
         
-        self.timeline_panel = TimelinePanel()
+        self.timeline_panel = TimelineView()
         
         self.main_splitter.addWidget(self.top_splitter)
         self.main_splitter.addWidget(self.timeline_panel)
