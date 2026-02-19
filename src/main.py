@@ -16,7 +16,6 @@ class FSEAPP(QApplication):
         super().__init__(sys.argv)
         self.setup_style_sheet()
         self.audio_engine: AudioEngine = AudioEngine()
-        
 
     def setup_style_sheet(self):
         compiled_css = sass.compile(filename="src/ui/themes/main.scss")
