@@ -32,10 +32,22 @@ jobs:
           pip install pyinstaller
           pip install -r requirements.txt
 
+      - name: Install ffmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Install ffmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+
+      - name: Install ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg --no-progress
+
       - name: Resolve ffmpeg binary path
         id: ffmpeg
         run: |
-          echo "path=$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" >> $GITHUB_OUTPUT
+          echo "path=$(python -c 'import shutil; print(shutil.which("ffmpeg"))')" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Build with pyinstaller
