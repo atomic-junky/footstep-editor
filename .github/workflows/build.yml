@@ -32,8 +32,20 @@ jobs:
           pip install pyinstaller
           pip install -r requirements.txt
 
+      - name: Resolve ffmpeg binary path
+        id: ffmpeg
+        run: |
+          echo "path=$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Build with pyinstaller
-        run: pyinstaller --noconsole --onefile src/__main__.py --name "${{ env.app-name }}-${{ matrix.os }}" --add-data "src/assets;assets"
+        run: >
+          pyinstaller
+          --noconsole --onefile
+          src/__main__.py
+          --name "${{ env.app-name }}-${{ matrix.os }}"
+          --add-data "src/assets:assets"
+          --add-binary "${{ steps.ffmpeg.outputs.path }}:imageio_ffmpeg/binaries"
 
       - name: Deploy artifacts
         uses: actions/upload-artifact@v6
