@@ -34,7 +34,9 @@ jobs:
 
       - name: Install ffmpeg (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get install -y ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
 
       - name: Install ffmpeg (macOS)
         if: runner.os == 'macOS'
@@ -63,5 +65,5 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: ${{ env.app-name }}-${{ matrix.os }}
-          path: app/dist/${{ env.app-name }}-${{ matrix.os }}*
+          path: /dist/${{ env.app-name }}-${{ matrix.os }}*
           if-no-files-found: error
