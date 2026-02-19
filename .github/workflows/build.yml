@@ -33,7 +33,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Build with pyinstaller
-        run: pyinstaller --noconsole --onefile src/__main__.py --name "${{ env.app-name }}-${{ matrix.os }}" --add-data "assets:assets"
+        run: pyinstaller --noconsole --onefile src/__main__.py --name "${{ env.app-name }}-${{ matrix.os }}" --add-data "src/assets;assets"
 
       - name: Deploy artifacts
         uses: actions/upload-artifact@v6
