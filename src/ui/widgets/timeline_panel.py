@@ -4,7 +4,7 @@ Timeline Panel - Simple and functional timeline with keys.
 
 from typing import Optional, List, Tuple, Dict, Any, Union
 
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsItem, QPushButton, QWidget, QLabel, QGraphicsLineItem, QGraphicsPathItem, QGraphicsTextItem, QGraphicsRectItem
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsItem, QPushButton, QWidget, QLabel, QGraphicsLineItem, QGraphicsPathItem, QGraphicsTextItem, QGraphicsRectItem, QApplication, QSlider
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal, QEvent, QPoint
 from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QPolygonF, QPainterPath, QIcon, QResizeEvent, QMouseEvent, QWheelEvent, QKeyEvent
 
@@ -14,6 +14,7 @@ class TimelinePanel(QFrame):
     play_clicked = Signal()
     pause_clicked = Signal()
     stop_clicked = Signal()
+    zoom_changed = Signal(float)
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -27,9 +28,10 @@ class TimelinePanel(QFrame):
         layout.addWidget(self.control_bar)
         
         self.timeline = TimelineView(self)
-        layout.addWidget(self.timeline)
+        layout.addWidget(self.timeline, 1)
         
         self.timeline.playhead_changed.connect(self._update_time_display)
+        self.zoom_changed.connect(self.timeline.set_zoom)
     
     def _update_time_display(self, time_sec: float) -> None:
         """Update time display label."""
@@ -47,32 +49,70 @@ class TimelinePanel(QFrame):
         control_layout.setContentsMargins(10, 5, 10, 5)
         control_layout.setSpacing(5)
         
+        # Left side: transport controls
+        self.btn_restart = QPushButton("⏮")
+        self.btn_restart.setFixedSize(32, 30)
+        self.btn_restart.setToolTip("Go to start")
+        
         self.btn_play = QPushButton("▶")
         self.btn_play.setFixedSize(32, 30)
-        self.btn_play.setToolTip("Play (Space)")
-        self.btn_play.clicked.connect(self.play_clicked.emit)
+        self.btn_play.setToolTip("Play/Pause (Space)")
+        self.btn_play.setCheckable(True)
+        self.btn_play.clicked.connect(self._on_play_toggle)
         
-        self.btn_pause = QPushButton("⏸")
-        self.btn_pause.setFixedSize(32, 30)
-        self.btn_pause.setToolTip("Pause")
-        self.btn_pause.clicked.connect(self.pause_clicked.emit)
+        self.btn_loop = QPushButton("🔁")
+        self.btn_loop.setFixedSize(32, 30)
+        self.btn_loop.setToolTip("Loop")
+        self.btn_loop.setCheckable(True)
         
-        self.btn_stop = QPushButton("⏹")
-        self.btn_stop.setFixedSize(32, 30)
-        self.btn_stop.setToolTip("Stop")
-        self.btn_stop.clicked.connect(self.stop_clicked.emit)
+        self.btn_record = QPushButton("⏺")
+        self.btn_record.setFixedSize(32, 30)
+        self.btn_record.setToolTip("Record")
+        self.btn_record.setCheckable(True)
         
+        control_layout.addWidget(self.btn_restart)
         control_layout.addWidget(self.btn_play)
-        control_layout.addWidget(self.btn_pause)
-        control_layout.addWidget(self.btn_stop)
+        control_layout.addWidget(self.btn_loop)
+        control_layout.addWidget(self.btn_record)
         
-        self.time_label = QLabel("00:00.00")
-        self.time_label.setMinimumWidth(90)
+        # Center: time display
+        control_layout.addStretch()
+        
+        self.time_label = QLabel("00:00:000")
+        self.time_label.setMinimumWidth(100)
+        self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = self.time_label.font()
+        font.setPointSize(11)
+        self.time_label.setFont(font)
         control_layout.addWidget(self.time_label)
         
         control_layout.addStretch()
         
+        # Right side: zoom slider
+        zoom_label = QLabel("Zoom:")
+        control_layout.addWidget(zoom_label)
+        
+        self.zoom_slider = QSlider(Qt.Orientation.Horizontal)
+        self.zoom_slider.setFixedWidth(100)
+        self.zoom_slider.setMinimum(1)
+        self.zoom_slider.setMaximum(150)
+        self.zoom_slider.setValue(40)
+        self.zoom_slider.setToolTip("Zoom timeline")
+        self.zoom_slider.valueChanged.connect(self._on_zoom_changed)
+        control_layout.addWidget(self.zoom_slider)
+        
         return control_widget
+    
+    def _on_play_toggle(self) -> None:
+        """Handle play button toggle."""
+        if self.btn_play.isChecked():
+            self.play_clicked.emit()
+        else:
+            self.pause_clicked.emit()
+    
+    def _on_zoom_changed(self, value: int) -> None:
+        """Handle zoom slider change."""
+        self.zoom_changed.emit(float(value))
 
 
 class TimelineView(QGraphicsView):
@@ -101,12 +141,12 @@ class TimelineView(QGraphicsView):
         # Handle configuration
         self.HANDLE_WIDTH = 2
         self.HANDLE_COLOR = QColor("#000000")
-        self.HANDLE_GRAB_MARGIN = 10
+        self.HANDLE_GRAB_MARGIN = 2
         
         self.file_start_sec: float = 0.0
         self.file_duration_sec: float = 30.0
         self.playhead_sec: float = 0.0
-        self.px_per_sec: float = 40.0
+        self.px_per_sec: float = 90.0
         self.dragging_playhead: bool = False
         self.dragging_start_handle: bool = False
         self.dragging_duration_handle: bool = False
@@ -211,9 +251,9 @@ class TimelineView(QGraphicsView):
             half = self.scene.addLine(x_half, h/2-3, x_half, h/2+3, QPen(QColor("#888888"), 1))
             half.setZValue(45)
             
-            # Add two intermediate ticks between the half tick
-            for i in range(1, 6):
-                x_intermediate = x + (i * interval * self.px_per_sec / 6)
+            # Add four intermediate ticks between the main tick and half tick
+            for i in range(1, 10):
+                x_intermediate = x + (i * interval * self.px_per_sec / 10)
                 intermediate_tick = self.scene.addLine(x_intermediate, h/2-1, x_intermediate, h/2+1, QPen(QColor("#C2C2C2"), 1))
                 intermediate_tick.setZValue(45)
             
@@ -404,29 +444,24 @@ class TimelineView(QGraphicsView):
             if scene_pos.y() >= self.RULER_HEIGHT:
                 return
             
-            # Priority: playhead > start handle > duration handle
-            # Check playhead first (highest priority)
             if self.playhead_handle and self._is_near_handle(scene_pos, self.playhead_handle):
                 self.dragging_playhead = True
-                self.set_playhead_from_x(scene_pos.x())
+                self.set_playhead_from_x(scene_pos.x(), event.modifiers())
                 event.accept()
                 return
             
-            # Check start handle
             if self.start_handle and self._is_near_handle(scene_pos, self.start_handle):
                 self.dragging_start_handle = True
                 event.accept()
                 return
             
-            # Check duration handle
             if self.duration_handle and self._is_near_handle(scene_pos, self.duration_handle):
                 self.dragging_duration_handle = True
                 event.accept()
                 return
             
-            # Default: drag playhead
             self.dragging_playhead = True
-            self.set_playhead_from_x(scene_pos.x())
+            self.set_playhead_from_x(scene_pos.x(), event.modifiers())
         
         super().mousePressEvent(event)
     
@@ -452,20 +487,12 @@ class TimelineView(QGraphicsView):
             )
             event.accept()
         elif self.dragging_start_handle:
-            scene_pos = self.mapToScene(event.position().toPoint())
-            new_start = (scene_pos.x() - self.LEFT_MARGIN) / self.px_per_sec
-            self.file_start_sec = max(0.0, min(new_start, self.file_duration_sec - 1.0))
-            self.build_timeline()
-            event.accept()
+            self._update_handle_position(event, is_start=True)
         elif self.dragging_duration_handle:
-            scene_pos = self.mapToScene(event.position().toPoint())
-            new_duration = (scene_pos.x() - self.LEFT_MARGIN) / self.px_per_sec
-            self.file_duration_sec = max(self.file_start_sec + 1.0, new_duration)
-            self.build_timeline()
-            event.accept()
+            self._update_handle_position(event, is_start=False)
         elif self.dragging_playhead:
             scene_pos = self.mapToScene(event.position().toPoint())
-            self.set_playhead_from_x(scene_pos.x())
+            self.set_playhead_from_x(scene_pos.x(), event.modifiers())
         elif self.space_pressed:
             self.setCursor(Qt.CursorShape.OpenHandCursor)
         
@@ -496,10 +523,7 @@ class TimelineView(QGraphicsView):
         delta = event.angleDelta().y()
         zoom_factor = 1.1 if delta > 0 else 0.9
         self.px_per_sec *= zoom_factor
-        
-        view_width = self.width() - self.LEFT_MARGIN
-        min_zoom = max(1.0, view_width / 900)  # 15 minutes max for min zoom
-        self.px_per_sec = max(min_zoom, min(150.0, self.px_per_sec))
+        self.px_per_sec = min(240.0, self.px_per_sec)
         
         self.build_timeline()
         
@@ -511,12 +535,33 @@ class TimelineView(QGraphicsView):
             self.horizontalScrollBar().value() + scroll_delta
         )
     
-    def set_playhead_from_x(self, scene_x: float) -> None:
+    def set_playhead_from_x(self, scene_x: float, modifiers: Qt.KeyboardModifier = Qt.KeyboardModifier.NoModifier) -> None:
         """Set playhead from scene x coordinate."""
         time = (scene_x - self.LEFT_MARGIN) / self.px_per_sec
+        time = self._snap(time, modifiers)
         self.playhead_sec = max(0.0, time)
         self.update_playhead()
         self.playhead_changed.emit(self.playhead_sec)
+    
+    def _update_handle_position(self, event: QMouseEvent, is_start: bool) -> None:
+        """Update start or duration handle position."""
+        scene_pos = self.mapToScene(event.position().toPoint())
+        new_value = (scene_pos.x() - self.LEFT_MARGIN) / self.px_per_sec
+        new_value = self._snap(new_value, event.modifiers())
+        
+        if is_start:
+            self.file_start_sec = max(0.0, min(new_value, self.file_duration_sec - 0.1))
+        else:
+            self.file_duration_sec = max(self.file_start_sec + 0.1, new_value)
+        
+        self.build_timeline()
+        event.accept()
+    
+    def _snap(self, value: float, modifiers: Qt.KeyboardModifier = Qt.KeyboardModifier.NoModifier, threshold: float = 0.1) -> float:
+        """Snap value unless Ctrl is pressed."""
+        if modifiers & Qt.KeyboardModifier.ControlModifier:
+            return value
+        return round(value / threshold) * threshold
     
     def update_headers_position(self) -> None:
         """Update track headers position to keep them visible during scroll."""
