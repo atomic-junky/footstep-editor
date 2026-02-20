@@ -2,7 +2,7 @@
 Timeline Panel - Simple and functional timeline with keys.
 """
 
-from typing import Optional, List, Tuple, Dict, Any
+from typing import Optional, List, Tuple, Dict, Any, Union
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsItem, QPushButton, QWidget, QLabel, QGraphicsLineItem, QGraphicsPathItem, QGraphicsTextItem, QGraphicsRectItem
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal, QEvent, QPoint
@@ -98,10 +98,18 @@ class TimelineView(QGraphicsView):
         self.TRACK_HEIGHT = 30
         self.TRACK_GAP = 5
         
-        self.max_duration_sec: float = 15 * 60
+        # Handle configuration
+        self.HANDLE_WIDTH = 2
+        self.HANDLE_COLOR = QColor("#000000")
+        self.HANDLE_GRAB_MARGIN = 10
+        
+        self.file_start_sec: float = 0.0
+        self.file_duration_sec: float = 30.0
         self.playhead_sec: float = 0.0
         self.px_per_sec: float = 40.0
         self.dragging_playhead: bool = False
+        self.dragging_start_handle: bool = False
+        self.dragging_duration_handle: bool = False
         self.panning: bool = False
         self.space_pressed: bool = False
         self.last_pan_pos: Optional[QPoint] = None
@@ -110,6 +118,12 @@ class TimelineView(QGraphicsView):
         self.playhead_line: Optional[QGraphicsLineItem] = None
         self.playhead_handle: Optional[QGraphicsPathItem] = None
         self.playhead_time_text: Optional[QGraphicsTextItem] = None
+        self.start_handle: Optional[QGraphicsRectItem] = None
+        self.start_line: Optional[QGraphicsLineItem] = None
+        self.start_overlay: Optional[QGraphicsRectItem] = None
+        self.duration_handle: Optional[QGraphicsRectItem] = None
+        self.duration_line: Optional[QGraphicsLineItem] = None
+        self.duration_overlay: Optional[QGraphicsRectItem] = None
         self.track_headers: List[Tuple[QGraphicsRectItem, QGraphicsTextItem]] = []
         self.ruler_safe_margin: Optional[QGraphicsRectItem] = None
         
@@ -131,9 +145,15 @@ class TimelineView(QGraphicsView):
         self.playhead_line = None
         self.playhead_handle = None
         self.playhead_time_text = None
+        self.start_handle = None
+        self.start_line = None
+        self.start_overlay = None
+        self.duration_handle = None
+        self.duration_line = None
+        self.duration_overlay = None
         self.ruler_safe_margin = None
         
-        scene_width = self.max_duration_sec * self.px_per_sec
+        scene_width = self.size().width()
         
         num_tracks = len(self.tracks)
         total_height = self.RULER_HEIGHT + num_tracks * (self.TRACK_HEIGHT + self.TRACK_GAP) + 20
@@ -146,6 +166,8 @@ class TimelineView(QGraphicsView):
             y += self.TRACK_HEIGHT + self.TRACK_GAP
         
         self.draw_ruler(scene_width)
+        
+        self.draw_duration_handle(total_height)
         
         self.update_playhead()
         
@@ -176,10 +198,10 @@ class TimelineView(QGraphicsView):
         lane.setZValue(-10)
         
         interval = self.get_time_interval()
-        max_time = int((width / self.px_per_sec) + 1)
-        ruler_range = map(lambda x: x/10.0, range(0, max_time, int(interval*10.0)))
+        max_time = (width / self.px_per_sec) + 1
         
-        for t in ruler_range:
+        t = 0
+        while t <= max_time:
             x = x_start + t * self.px_per_sec
             x_half = x + (interval * self.px_per_sec / 2)
             
@@ -201,6 +223,8 @@ class TimelineView(QGraphicsView):
             text.setDefaultTextColor(QColor("#888888"))
             text.setPos(x - text.boundingRect().width() / 2, self.RULER_HEIGHT/2 - 10)
             text.setZValue(45)
+            
+            t += interval
     
     def get_time_interval(self) -> float:
         """Get time interval for ruler ticks based on zoom level."""
@@ -233,7 +257,7 @@ class TimelineView(QGraphicsView):
     
     def draw_track(self, track: Dict[str, Any], y: float, width: float) -> None:
         """Draw a track with keys."""
-        x_start = self.LEFT_MARGIN
+        x_start = 0
         
         lane = self.scene.addLine(
             x_start, y+self.TRACK_HEIGHT/2, x_start + width, y+self.TRACK_HEIGHT/2,
@@ -265,6 +289,60 @@ class TimelineView(QGraphicsView):
         )
         key_item.setZValue(10)
     
+    def draw_duration_handle(self, total_height: float) -> None:
+        """Draw start and duration handles to define file bounds."""
+        x_start = self.LEFT_MARGIN + self.file_start_sec * self.px_per_sec
+        x_end = self.LEFT_MARGIN + self.file_duration_sec * self.px_per_sec
+        
+        scene_rect = self.scene.sceneRect()
+        overlay_width_end = scene_rect.width() - x_end
+        overlay_width_start = x_start
+        overlays = [
+            (0, 0, overlay_width_start),
+            (x_end, 0, overlay_width_end)
+        ]
+        
+        for x, y, w in overlays:
+            if w <= 0:
+                continue
+            overlay = self.scene.addRect(
+                x, y, w, total_height,
+                QPen(Qt.PenStyle.NoPen),
+                QBrush(QColor(200, 200, 200, 60))
+            )
+            overlay.setZValue(100)
+        
+        
+        line_color = QColor("#888888")
+        lines = [x_start, x_end]
+        
+        for line_x in lines:
+            line = self.scene.addLine(
+                line_x, 0, line_x, total_height,
+                QPen(line_color, 1, Qt.PenStyle.DashLine)
+             )
+            line.setZValue(90)
+        
+        # Create start handle
+        self.start_handle = self.scene.addRect(
+            x_start - self.HANDLE_WIDTH/2, 0, self.HANDLE_WIDTH, self.RULER_HEIGHT,
+            QPen(self.HANDLE_COLOR, 1),
+            QBrush(self.HANDLE_COLOR)
+        )
+        self.start_handle.setZValue(105)
+        self.start_handle.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+        self.start_handle.setCursor(Qt.CursorShape.SizeHorCursor)
+        
+        # Create duration handle
+        self.duration_handle = self.scene.addRect(
+            x_end - self.HANDLE_WIDTH/2, 0, self.HANDLE_WIDTH, self.RULER_HEIGHT,
+            QPen(self.HANDLE_COLOR, 1),
+            QBrush(self.HANDLE_COLOR)
+        )
+        self.duration_handle.setZValue(105)
+        self.duration_handle.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+        self.duration_handle.setCursor(Qt.CursorShape.SizeHorCursor)
+    
     def update_playhead(self) -> None:
         """Update playhead position."""
         if self.playhead_line:
@@ -275,15 +353,13 @@ class TimelineView(QGraphicsView):
             self.scene.removeItem(self.playhead_time_text)
         
         x = self.LEFT_MARGIN + self.playhead_sec * self.px_per_sec
-        
-        num_tracks = len(self.tracks)
-        line_height = self.RULER_HEIGHT + num_tracks * (self.TRACK_HEIGHT + self.TRACK_GAP)
+        line_height = self.scene.sceneRect().height()
         
         self.playhead_line = self.scene.addLine(
             x, 0, x, line_height,
             QPen(QColor("#e74c3c"), 2)
         )
-        self.playhead_line.setZValue(100)
+        self.playhead_line.setZValue(140)
         
         head_path = QPainterPath()
         rect_radius = 4
@@ -308,7 +384,7 @@ class TimelineView(QGraphicsView):
             QPen(Qt.PenStyle.NoPen),
             QBrush(QColor("#e74c3c"))
         )
-        self.playhead_handle.setZValue(101)
+        self.playhead_handle.setZValue(150)
     
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle view resize."""
@@ -317,6 +393,7 @@ class TimelineView(QGraphicsView):
     
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press."""
+        
         if event.button() == Qt.MouseButton.MiddleButton or (event.button() == Qt.MouseButton.LeftButton and self.space_pressed):
             self.panning = True
             self.last_pan_pos = event.position().toPoint()
@@ -324,12 +401,41 @@ class TimelineView(QGraphicsView):
             event.accept()
         elif event.button() == Qt.MouseButton.LeftButton:
             scene_pos = self.mapToScene(event.position().toPoint())
+            if scene_pos.y() >= self.RULER_HEIGHT:
+                return
             
-            if scene_pos.y() < self.RULER_HEIGHT:
+            # Priority: playhead > start handle > duration handle
+            # Check playhead first (highest priority)
+            if self.playhead_handle and self._is_near_handle(scene_pos, self.playhead_handle):
                 self.dragging_playhead = True
                 self.set_playhead_from_x(scene_pos.x())
+                event.accept()
+                return
+            
+            # Check start handle
+            if self.start_handle and self._is_near_handle(scene_pos, self.start_handle):
+                self.dragging_start_handle = True
+                event.accept()
+                return
+            
+            # Check duration handle
+            if self.duration_handle and self._is_near_handle(scene_pos, self.duration_handle):
+                self.dragging_duration_handle = True
+                event.accept()
+                return
+            
+            # Default: drag playhead
+            self.dragging_playhead = True
+            self.set_playhead_from_x(scene_pos.x())
         
         super().mousePressEvent(event)
+    
+    def _is_near_handle(self, scene_pos: QPointF, handle: Union[QGraphicsPathItem, QGraphicsRectItem]) -> bool:
+        """Check if mouse position is near a handle."""
+        handle_rect = handle.boundingRect()
+        handle_pos = handle.pos()
+        handle_x = handle_rect.x() + handle_pos.x() + handle_rect.width() / 2
+        return abs(scene_pos.x() - handle_x) < self.HANDLE_GRAB_MARGIN
     
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """Handle mouse move."""
@@ -344,6 +450,18 @@ class TimelineView(QGraphicsView):
             self.verticalScrollBar().setValue(
                 self.verticalScrollBar().value() - delta.y()
             )
+            event.accept()
+        elif self.dragging_start_handle:
+            scene_pos = self.mapToScene(event.position().toPoint())
+            new_start = (scene_pos.x() - self.LEFT_MARGIN) / self.px_per_sec
+            self.file_start_sec = max(0.0, min(new_start, self.file_duration_sec - 1.0))
+            self.build_timeline()
+            event.accept()
+        elif self.dragging_duration_handle:
+            scene_pos = self.mapToScene(event.position().toPoint())
+            new_duration = (scene_pos.x() - self.LEFT_MARGIN) / self.px_per_sec
+            self.file_duration_sec = max(self.file_start_sec + 1.0, new_duration)
+            self.build_timeline()
             event.accept()
         elif self.dragging_playhead:
             scene_pos = self.mapToScene(event.position().toPoint())
@@ -365,6 +483,8 @@ class TimelineView(QGraphicsView):
             event.accept()
         elif event.button() == Qt.MouseButton.LeftButton:
             self.dragging_playhead = False
+            self.dragging_start_handle = False
+            self.dragging_duration_handle = False
         
         super().mouseReleaseEvent(event)
     
@@ -375,11 +495,10 @@ class TimelineView(QGraphicsView):
         
         delta = event.angleDelta().y()
         zoom_factor = 1.1 if delta > 0 else 0.9
-        old_px_per_sec = self.px_per_sec
         self.px_per_sec *= zoom_factor
         
         view_width = self.width() - self.LEFT_MARGIN
-        min_zoom = max(1.0, view_width / self.max_duration_sec)
+        min_zoom = max(1.0, view_width / 900)  # 15 minutes max for min zoom
         self.px_per_sec = max(min_zoom, min(150.0, self.px_per_sec))
         
         self.build_timeline()
@@ -404,7 +523,6 @@ class TimelineView(QGraphicsView):
         scroll_x = self.horizontalScrollBar().value()
         
         for header_bg, name_text in self.track_headers:
-            rect = header_bg.rect()
             y = header_bg.pos().y()
             
             header_bg.setPos(scroll_x, y)

@@ -2,8 +2,8 @@ import logging
 import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication
 import sass
+from PySide6.QtWidgets import QApplication
 
 from src.core.audio_engine import AudioEngine
 

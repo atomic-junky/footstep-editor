@@ -1,1 +1,1 @@
-from src.ui.frmMain import FSEditor
+from src.ui.main import FSEditor
