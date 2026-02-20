@@ -9,14 +9,14 @@ from pathlib import Path
 from random import randint
 
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QApplication
-
-# Resolves correctly both when running from source and from a PyInstaller bundle
-_ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 from PySide6.QtCore import Qt
 from pydub import AudioSegment
 
 from src.ui.widgets.mix_pad import MixPad
 from src.core.mixer import Mixer
+
+
+_ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 
 
 class PropertiesPanel(QFrame):
