@@ -58,7 +58,7 @@ jobs:
           pyinstaller
           --noconsole --onefile
           src/__main__.py
-          --name "${{ env.app-name }}-${{ matrix.os }}-py${{ matrix.python-version }}"
+          --name "${{ env.app-name }}-${{ runner.os }}-py${{ matrix.python-version }}"
           --add-data "src/assets:assets"
           --add-binary "${{ steps.ffmpeg.outputs.ffmpeg }}:imageio_ffmpeg/binaries"
           --add-binary "${{ steps.ffmpeg.outputs.ffprobe }}:imageio_ffmpeg/binaries"
