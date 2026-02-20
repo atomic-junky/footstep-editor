@@ -1,9 +1,21 @@
+// Theme system
+// Note: These values are also defined in variables.py (ThemeVariables class)
+// Keep both files synchronized when updating the theme
+
 $bg_color: #f3f4f6;
 $surface_color: #ffffff;
 $border_color: #e5e7eb;
 $text_color: #1f2937;
 $primary_color: #8b5cf6;
 $accent_color: #a3e635;
+
+$button_radius: 4px;
+$panel_radius: 16px;
+$control_bar_height: 40px;
+$button_size: 32px;
+$control_bar_margin: 10px;
+$control_bar_margin_v: 5px;
+$control_bar_spacing: 5px;
 
 QMainWindow {
     background-color: $bg_color;
@@ -25,13 +37,18 @@ QFrame#ViewPanel {
 
 QFrame#MixPad {
     background-color: $border_color;
-    border-radius: 16px;
+    border-radius: $panel_radius;
+}
+
+QWidget#TimelineControlBar {
+    background-color: $surface_color;
+    border-bottom: 1px solid $border_color;
 }
 
 QPushButton {
     background-color: $surface_color;
     border: 1px solid $border_color;
-    border-radius: 4px;
+    border-radius: $button_radius;
     padding: 4px 8px;
     font-weight: 600;
 

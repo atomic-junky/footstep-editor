@@ -8,6 +8,8 @@ from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QGraphicsView, Q
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal, QEvent, QPoint
 from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QPolygonF, QPainterPath, QIcon, QResizeEvent, QMouseEvent, QWheelEvent, QKeyEvent
 
+from ..themes.variables import ThemeVariables
+
 
 class TimelinePanel(QFrame):
     """Container for timeline with playback controls."""
@@ -21,6 +23,7 @@ class TimelinePanel(QFrame):
         self.setObjectName("TimelinePanel")
         
         layout = QVBoxLayout(self)
+        layout.setObjectName("TimelinePanelVBox")
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
@@ -32,6 +35,7 @@ class TimelinePanel(QFrame):
         
         self.timeline.playhead_changed.connect(self._update_time_display)
         self.zoom_changed.connect(self.timeline.set_zoom)
+        self.btn_restart.clicked.connect(self._on_restart)
     
     def _update_time_display(self, time_sec: float) -> None:
         """Update time display label."""
@@ -43,30 +47,30 @@ class TimelinePanel(QFrame):
     def _create_control_bar(self) -> QWidget:
         """Create playback control bar."""
         control_widget = QWidget()
-        control_widget.setFixedHeight(40)
+        control_widget.setObjectName("TimelineControlBar")
+        control_widget.setFixedHeight(ThemeVariables.CONTROL_BAR_HEIGHT)
         
         control_layout = QHBoxLayout(control_widget)
-        control_layout.setContentsMargins(10, 5, 10, 5)
-        control_layout.setSpacing(5)
+        control_layout.setContentsMargins(ThemeVariables.CONTROL_BAR_MARGIN, ThemeVariables.CONTROL_BAR_MARGIN_V, ThemeVariables.CONTROL_BAR_MARGIN, ThemeVariables.CONTROL_BAR_MARGIN_V)
+        control_layout.setSpacing(ThemeVariables.CONTROL_BAR_SPACING)
         
-        # Left side: transport controls
         self.btn_restart = QPushButton("⏮")
-        self.btn_restart.setFixedSize(32, 30)
+        self.btn_restart.setFixedSize(ThemeVariables.BUTTON_SIZE, ThemeVariables.BUTTON_HEIGHT)
         self.btn_restart.setToolTip("Go to start")
         
         self.btn_play = QPushButton("▶")
-        self.btn_play.setFixedSize(32, 30)
+        self.btn_play.setFixedSize(ThemeVariables.BUTTON_SIZE, ThemeVariables.BUTTON_HEIGHT)
         self.btn_play.setToolTip("Play/Pause (Space)")
         self.btn_play.setCheckable(True)
         self.btn_play.clicked.connect(self._on_play_toggle)
         
         self.btn_loop = QPushButton("🔁")
-        self.btn_loop.setFixedSize(32, 30)
+        self.btn_loop.setFixedSize(ThemeVariables.BUTTON_SIZE, ThemeVariables.BUTTON_HEIGHT)
         self.btn_loop.setToolTip("Loop")
         self.btn_loop.setCheckable(True)
         
         self.btn_record = QPushButton("⏺")
-        self.btn_record.setFixedSize(32, 30)
+        self.btn_record.setFixedSize(ThemeVariables.BUTTON_SIZE, ThemeVariables.BUTTON_HEIGHT)
         self.btn_record.setToolTip("Record")
         self.btn_record.setCheckable(True)
         
@@ -75,20 +79,18 @@ class TimelinePanel(QFrame):
         control_layout.addWidget(self.btn_loop)
         control_layout.addWidget(self.btn_record)
         
-        # Center: time display
         control_layout.addStretch()
         
         self.time_label = QLabel("00:00:000")
         self.time_label.setMinimumWidth(100)
         self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         font = self.time_label.font()
-        font.setPointSize(11)
+        font.setPointSize(ThemeVariables.FONT_SIZE_TIME)
         self.time_label.setFont(font)
         control_layout.addWidget(self.time_label)
         
         control_layout.addStretch()
         
-        # Right side: zoom slider
         zoom_label = QLabel("Zoom:")
         control_layout.addWidget(zoom_label)
         
@@ -113,6 +115,12 @@ class TimelinePanel(QFrame):
     def _on_zoom_changed(self, value: int) -> None:
         """Handle zoom slider change."""
         self.zoom_changed.emit(float(value))
+    
+    def _on_restart(self) -> None:
+        """Reset playhead to start."""
+        self.timeline.playhead_sec = 0.0
+        self.timeline.update_playhead()
+        self.timeline.playhead_changed.emit(0.0)
 
 
 class TimelineView(QGraphicsView):
@@ -132,16 +140,17 @@ class TimelineView(QGraphicsView):
         self.scene = QGraphicsScene()
         self.setScene(self.scene)
         
-        self.LEFT_MARGIN = 100
-        self.RIGHT_MARGIN = 30
-        self.RULER_HEIGHT = 20
-        self.TRACK_HEIGHT = 30
-        self.TRACK_GAP = 5
+        # Use theme dimensions
+        self.LEFT_MARGIN = ThemeVariables.LEFT_MARGIN
+        self.RIGHT_MARGIN = ThemeVariables.RIGHT_MARGIN
+        self.RULER_HEIGHT = ThemeVariables.RULER_HEIGHT
+        self.TRACK_HEIGHT = ThemeVariables.TRACK_HEIGHT
+        self.TRACK_GAP = ThemeVariables.TRACK_GAP
         
         # Handle configuration
-        self.HANDLE_WIDTH = 2
-        self.HANDLE_COLOR = QColor("#000000")
-        self.HANDLE_GRAB_MARGIN = 2
+        self.HANDLE_WIDTH = ThemeVariables.HANDLE_WIDTH
+        self.HANDLE_COLOR = ThemeVariables.HANDLE_COLOR
+        self.HANDLE_GRAB_MARGIN = ThemeVariables.HANDLE_GRAB_MARGIN
         
         self.file_start_sec: float = 0.0
         self.file_duration_sec: float = 30.0
@@ -196,7 +205,7 @@ class TimelineView(QGraphicsView):
         scene_width = self.size().width()
         
         num_tracks = len(self.tracks)
-        total_height = self.RULER_HEIGHT + num_tracks * (self.TRACK_HEIGHT + self.TRACK_GAP) + 20
+        total_height = self.RULER_HEIGHT + num_tracks * (self.TRACK_HEIGHT + self.TRACK_GAP) + ThemeVariables.TIMELINE_BOTTOM_PADDING
         
         self.scene.setSceneRect(0, 0, self.LEFT_MARGIN + scene_width + self.RIGHT_MARGIN, total_height)
         
@@ -221,19 +230,19 @@ class TimelineView(QGraphicsView):
         h = self.RULER_HEIGHT
         x_start = self.LEFT_MARGIN
         
-        bg = self.scene.addRect(x_start, y, width + self.RIGHT_MARGIN, h, QPen(Qt.PenStyle.NoPen), QBrush(QColor("#f5f5f5")))
+        bg = self.scene.addRect(x_start, y, width + self.RIGHT_MARGIN, h, QPen(Qt.PenStyle.NoPen), QBrush(ThemeVariables.RULER_BG))
         bg.setZValue(41)
         
         self.ruler_safe_margin = self.scene.addRect(
             0, y, x_start, h,
             QPen(Qt.PenStyle.NoPen),
-            QBrush(QColor("#e0e0e0"))
+            QBrush(ThemeVariables.RULER_SAFE_MARGIN)
         )
         self.ruler_safe_margin.setZValue(40)
         
         lane = self.scene.addLine(
             x_start, self.RULER_HEIGHT, x_start + width, self.RULER_HEIGHT,
-            QPen(QColor("#dddddd"), 1)
+            QPen(ThemeVariables.LINE_COLOR, 1)
         )
         lane.setZValue(-10)
         
@@ -248,19 +257,19 @@ class TimelineView(QGraphicsView):
             if x > x_start + width:
                 break
             
-            half = self.scene.addLine(x_half, h/2-3, x_half, h/2+3, QPen(QColor("#888888"), 1))
+            half = self.scene.addLine(x_half, h/2-3, x_half, h/2+3, QPen(ThemeVariables.TEXT_MUTED, 1))
             half.setZValue(45)
             
             # Add four intermediate ticks between the main tick and half tick
             for i in range(1, 10):
                 x_intermediate = x + (i * interval * self.px_per_sec / 10)
-                intermediate_tick = self.scene.addLine(x_intermediate, h/2-1, x_intermediate, h/2+1, QPen(QColor("#C2C2C2"), 1))
+                intermediate_tick = self.scene.addLine(x_intermediate, h/2-1, x_intermediate, h/2+1, QPen(ThemeVariables.TEXT_LIGHT, 1))
                 intermediate_tick.setZValue(45)
             
             label = self.format_time(t)
             text = self.scene.addText(label)
-            text.setFont(QFont("Arial", 8))
-            text.setDefaultTextColor(QColor("#888888"))
+            text.setFont(QFont("Arial", ThemeVariables.FONT_SIZE_NORMAL))
+            text.setDefaultTextColor(ThemeVariables.TEXT_MUTED)
             text.setPos(x - text.boundingRect().width() / 2, self.RULER_HEIGHT/2 - 10)
             text.setZValue(45)
             
@@ -300,8 +309,8 @@ class TimelineView(QGraphicsView):
         x_start = 0
         
         lane = self.scene.addLine(
-            x_start, y+self.TRACK_HEIGHT/2, x_start + width, y+self.TRACK_HEIGHT/2,
-            QPen(QColor("#dddddd"), 1)
+            x_start, y+self.TRACK_HEIGHT/2, self.sceneRect().width(), y+self.TRACK_HEIGHT/2,
+            QPen(ThemeVariables.LINE_COLOR, 1)
         )
         lane.setZValue(-10)
         
@@ -313,7 +322,7 @@ class TimelineView(QGraphicsView):
     def draw_key(self, time_sec: float, y: float) -> None:
         """Draw a key (diamond) at time position."""
         x = self.LEFT_MARGIN + time_sec * self.px_per_sec
-        size = 6
+        size = ThemeVariables.KEY_SIZE
         
         diamond = QPolygonF([
             QPointF(x, y - size),
@@ -324,8 +333,8 @@ class TimelineView(QGraphicsView):
         
         key_item = self.scene.addPolygon(
             diamond,
-            QPen(QColor("#e67e22"), 2),
-            QBrush(QColor("#f39c12"))
+            QPen(ThemeVariables.KEY_STROKE, 2),
+            QBrush(ThemeVariables.KEY_FILL)
         )
         key_item.setZValue(10)
     
@@ -348,12 +357,12 @@ class TimelineView(QGraphicsView):
             overlay = self.scene.addRect(
                 x, y, w, total_height,
                 QPen(Qt.PenStyle.NoPen),
-                QBrush(QColor(200, 200, 200, 60))
+                QBrush(ThemeVariables.OVERLAY_COLOR)
             )
             overlay.setZValue(100)
         
         
-        line_color = QColor("#888888")
+        line_color = ThemeVariables.TEXT_MUTED
         lines = [x_start, x_end]
         
         for line_x in lines:
@@ -397,18 +406,18 @@ class TimelineView(QGraphicsView):
         
         self.playhead_line = self.scene.addLine(
             x, 0, x, line_height,
-            QPen(QColor("#e74c3c"), 2)
+            QPen(ThemeVariables.PLAYHEAD_COLOR, ThemeVariables.PLAYHEAD_LINE_WIDTH)
         )
         self.playhead_line.setZValue(140)
         
         head_path = QPainterPath()
-        rect_radius = 4
-        rect_width = self.RULER_HEIGHT*0.5+4
-        rect_height = self.RULER_HEIGHT*0.5
+        rect_radius = ThemeVariables.PLAYHEAD_RADIUS
+        rect_width = self.RULER_HEIGHT * ThemeVariables.PLAYHEAD_WIDTH_RATIO + 4
+        rect_height = self.RULER_HEIGHT * ThemeVariables.PLAYHEAD_WIDTH_RATIO
         triangle_width = rect_width
-        triangle_height = self.RULER_HEIGHT*0.5
+        triangle_height = self.RULER_HEIGHT * ThemeVariables.PLAYHEAD_WIDTH_RATIO
         rect_x = x - rect_width/2
-        rect_y = self.RULER_HEIGHT - rect_height-triangle_height
+        rect_y = self.RULER_HEIGHT - rect_height - triangle_height
         head_path.addRoundedRect(
             QRectF(rect_x, rect_y, rect_width, rect_height),
             rect_radius, 0
@@ -422,7 +431,7 @@ class TimelineView(QGraphicsView):
         self.playhead_handle = self.scene.addPath(
             head_path,
             QPen(Qt.PenStyle.NoPen),
-            QBrush(QColor("#e74c3c"))
+            QBrush(ThemeVariables.PLAYHEAD_COLOR)
         )
         self.playhead_handle.setZValue(150)
     
@@ -523,7 +532,9 @@ class TimelineView(QGraphicsView):
         delta = event.angleDelta().y()
         zoom_factor = 1.1 if delta > 0 else 0.9
         self.px_per_sec *= zoom_factor
-        self.px_per_sec = min(240.0, self.px_per_sec)
+        
+        # Apply zoom limits
+        self.px_per_sec = max(1.0, min(150.0, self.px_per_sec))
         
         self.build_timeline()
         
@@ -542,6 +553,21 @@ class TimelineView(QGraphicsView):
         self.playhead_sec = max(0.0, time)
         self.update_playhead()
         self.playhead_changed.emit(self.playhead_sec)
+    
+    def set_zoom(self, px_per_sec: float) -> None:
+        """Set zoom level (pixels per second)."""
+        # Get current center time to maintain zoom position
+        view_center_x = self.viewport().width() / 2 + self.horizontalScrollBar().value()
+        center_time = (view_center_x - self.LEFT_MARGIN) / self.px_per_sec
+        
+        # Update zoom with limits
+        self.px_per_sec = max(1.0, min(150.0, px_per_sec))
+        self.build_timeline()
+        
+        # Restore center position
+        new_center_x = self.LEFT_MARGIN + center_time * self.px_per_sec
+        new_scroll = int(new_center_x - self.viewport().width() / 2)
+        self.horizontalScrollBar().setValue(new_scroll)
     
     def _update_handle_position(self, event: QMouseEvent, is_start: bool) -> None:
         """Update start or duration handle position."""
