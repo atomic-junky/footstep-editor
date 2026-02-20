@@ -32,6 +32,13 @@ jobs:
           pip install pyinstaller
           pip install -r requirements.txt
 
+      - name: Compute name slug
+        id: slug
+        run: |
+          echo "os=$(echo '${{ runner.os }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "pyver=$(echo '${{ matrix.python-version }}' | tr '.' '_')" >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Install ffmpeg (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -58,7 +65,7 @@ jobs:
           pyinstaller
           --noconsole --onefile
           src/__main__.py
-          --name "${{ env.app-name }}-${{ runner.os }}-py${{ matrix.python-version }}"
+          --name "${{ env.app-name }}-${{ steps.slug.outputs.os }}-py${{ steps.slug.outputs.pyver }}"
           --add-data "src/assets:assets"
           --add-binary "${{ steps.ffmpeg.outputs.ffmpeg }}:imageio_ffmpeg/binaries"
           --add-binary "${{ steps.ffmpeg.outputs.ffprobe }}:imageio_ffmpeg/binaries"
@@ -95,6 +102,6 @@ jobs:
       - name: Deploy artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ env.app-name }}-${{ runner.os }}-py${{ matrix.python-version }}
-          path: dist/${{ env.app-name }}-${{ runner.os }}-py${{ matrix.python-version }}*
+          name: ${{ env.app-name }}-${{ steps.slug.outputs.os }}-py${{ steps.slug.outputs.pyver }}
+          path: dist/${{ env.app-name }}-${{ steps.slug.outputs.os }}-py${{ steps.slug.outputs.pyver }}*
           if-no-files-found: error
