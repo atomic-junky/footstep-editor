@@ -41,7 +41,7 @@ class TimelinePanel(QFrame):
         """Update time display label."""
         minutes = int(time_sec // 60)
         seconds = int(time_sec % 60)
-        milliseconds = int((time_sec % 1) * 1000)
+        milliseconds = int(round(time_sec% 1, 3)*1000)
         self.time_label.setText(f"{minutes:02d}:{seconds:02d}:{milliseconds:03d}")
     
     def _create_control_bar(self) -> QWidget:
