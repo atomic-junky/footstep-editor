@@ -5,9 +5,13 @@ This widget represents the properties area.
 """
 
 import numpy as np
+from pathlib import Path
 from random import randint
 
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QApplication
+
+# Resolves correctly both when running from source and from a PyInstaller bundle
+_ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 from PySide6.QtCore import Qt
 from pydub import AudioSegment
 
@@ -36,8 +40,7 @@ class PropertiesPanel(QFrame):
     def _preload_segments(self):
         for material in ["floor", "dirt", "wood", "gravel"]:
             for idx in range(1, 22):
-                file_path = f"src/assets/sfx/footsteps/{material}/Steps_{material}-{idx:03d}.ogg"
-                print(file_path)
+                file_path = _ASSETS_DIR / "sfx" / "footsteps" / material / f"Steps_{material}-{idx:03d}.ogg"
                 self._segments[file_path] = AudioSegment.from_file(file_path)
 
     def _on_mix_pad_moved(self, x: float, y: float):
@@ -61,7 +64,7 @@ class PropertiesPanel(QFrame):
             p2 = np.array([round(x, 2), round(y, 2)])
             dist = np.sqrt(np.sum((p1 - p2) ** 2))
             volume_db = max(-40.0, -20.0 * dist / 0.75)
-            file_path = f"src/assets/sfx/footsteps/{material}/Steps_{material}-{idx:03d}.ogg"
+            file_path = _ASSETS_DIR / "sfx" / "footsteps" / material / f"Steps_{material}-{idx:03d}.ogg"
             segment = self._segments[file_path]
             mixer.add_segment(segment, volume_db)
 

@@ -67,6 +67,7 @@ jobs:
           src/__main__.py
           --name "${{ env.app-name }}-${{ steps.slug.outputs.os }}-py${{ steps.slug.outputs.pyver }}"
           --add-data "src/assets:assets"
+          --add-data "src/ui/themes:ui/themes"
           --add-binary "${{ steps.ffmpeg.outputs.ffmpeg }}:imageio_ffmpeg/binaries"
           --add-binary "${{ steps.ffmpeg.outputs.ffprobe }}:imageio_ffmpeg/binaries"
           --hidden-import _cffi_backend
