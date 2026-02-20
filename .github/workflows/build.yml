@@ -46,10 +46,11 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ffmpeg --no-progress
 
-      - name: Resolve ffmpeg binary path
+      - name: Resolve ffmpeg binary paths
         id: ffmpeg
         run: |
-          echo "path=$(python -c 'import shutil; print(shutil.which("ffmpeg"))')" >> $GITHUB_OUTPUT
+          echo "ffmpeg=$(python -c 'import shutil; print(shutil.which("ffmpeg"))')" >> $GITHUB_OUTPUT
+          echo "ffprobe=$(python -c 'import shutil; print(shutil.which("ffprobe"))')" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Build with pyinstaller
@@ -59,11 +60,12 @@ jobs:
           src/__main__.py
           --name "${{ env.app-name }}-${{ matrix.os }}"
           --add-data "src/assets:assets"
-          --add-binary "${{ steps.ffmpeg.outputs.path }}:imageio_ffmpeg/binaries"
+          --add-binary "${{ steps.ffmpeg.outputs.ffmpeg }}:imageio_ffmpeg/binaries"
+          --add-binary "${{ steps.ffmpeg.outputs.ffprobe }}:imageio_ffmpeg/binaries"
 
       - name: Deploy artifacts
         uses: actions/upload-artifact@v6
         with:
           name: ${{ env.app-name }}-${{ matrix.os }}
-          path: /dist/${{ env.app-name }}-${{ matrix.os }}*
+          path: dist/${{ env.app-name }}-${{ matrix.os }}*
           if-no-files-found: error
